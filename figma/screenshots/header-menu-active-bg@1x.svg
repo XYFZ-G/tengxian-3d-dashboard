@@ -1,0 +1,19 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 125 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="&#229;&#164;&#180;&#233;&#131;&#168;&#230;&#140;&#137;&#233;&#146;&#174;&#233;&#128;&#137;&#228;&#184;&#173;&#232;&#131;&#140;&#230;&#153;&#175;">
+<rect id="Rectangle 1325" width="125" height="52" fill="url(#paint0_radial_0_8)"/>
+<rect id="Rectangle 1324" x="8" y="52" width="108" height="2" fill="url(#paint1_linear_0_8)"/>
+<path id="Polygon 3" d="M62.5 44L70 52H55L62.5 44Z" fill="var(--fill-0, #1EFBFF)"/>
+</g>
+<defs>
+<radialGradient id="paint0_radial_0_8" cx="0" cy="0" r="1" gradientTransform="matrix(1.15741 -61.579 59.5856 2.09717 62.5 62.9474)" gradientUnits="userSpaceOnUse">
+<stop stop-color="#2AB1E7"/>
+<stop offset="1" stop-color="#081B39" stop-opacity="0"/>
+</radialGradient>
+<linearGradient id="paint1_linear_0_8" x1="8" y1="53" x2="116" y2="53" gradientUnits="userSpaceOnUse">
+<stop stop-color="#7AE1FF" stop-opacity="0"/>
+<stop offset="0.426713" stop-color="#1EFBFF"/>
+<stop offset="0.605516" stop-color="#4CEEFF"/>
+<stop offset="1" stop-color="#7AE1FF" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>
