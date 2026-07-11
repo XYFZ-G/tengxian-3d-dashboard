@@ -1408,6 +1408,16 @@ export function useThreeScene(containerRef) {
     focusCamera(CAMERA_TOP_POSITION, CAMERA_TOP_TARGET)
   }
 
+  function transitionToHome() {
+    if (!camera || !controls) return
+    transitionCamera(camera.position, controls.target, CAMERA_HOME_POSITION, CAMERA_HOME_TARGET)
+  }
+
+  function transitionToTop() {
+    if (!camera || !controls) return
+    transitionCamera(camera.position, controls.target, CAMERA_TOP_POSITION, CAMERA_TOP_TARGET)
+  }
+
   function playIntroCameraTransition() {
     transitionCamera(CAMERA_INTRO_START_POSITION, CAMERA_INTRO_START_TARGET, CAMERA_HOME_POSITION, CAMERA_HOME_TARGET)
   }
@@ -1433,6 +1443,8 @@ export function useThreeScene(containerRef) {
     clearMap,
     focusHome,
     focusTop,
+    transitionToHome,
+    transitionToTop,
     playIntroCameraTransition,
     dispose,
     get scene() {

@@ -73,12 +73,12 @@ function returnToParentMap() {
 
 function focusTiltView() {
   iconPoints.close()
-  threeScene.focusHome()
+  threeScene.transitionToHome()
 }
 
 function focusTopView() {
   iconPoints.close()
-  threeScene.focusTop()
+  threeScene.transitionToTop()
 }
 
 defineExpose({

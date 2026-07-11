@@ -10,18 +10,19 @@ use([BarChart, PieChart, GridComponent, CanvasRenderer])
 
 const DESIGN_WIDTH = 1920
 const DESIGN_HEIGHT = 1080
-const TOTAL_USERS_ICON = new URL('../figma/screenshots/total-aggregated-users-icon@1.5x.png', import.meta.url).href
-const TOTAL_CAPACITY_ICON = new URL('../figma/screenshots/total-aggregated-capacity-icon@1.5x.png', import.meta.url).href
-const PEAK_CAPACITY_ICON = new URL('../figma/screenshots/peak-shaving-capacity-icon@1.5x.png', import.meta.url).href
-const VALLEY_CAPACITY_ICON = new URL('../figma/screenshots/valley-filling-capacity-icon@1.5x.png', import.meta.url).href
+const TOTAL_USERS_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-users.png', import.meta.url).href
+const TOTAL_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-capacity.png', import.meta.url).href
+const PEAK_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/peak-shaving-capacity.png', import.meta.url).href
+const VALLEY_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/valley-filling-capacity.png', import.meta.url).href
 const RESOURCE_ACCESS_ICON = new URL('../figma/screenshots/resource-access-rate-icon@1x.png', import.meta.url).href
 const RESOURCE_ONLINE_ICON = new URL('../figma/screenshots/resource-online-rate-icon@1.5x.png', import.meta.url).href
 const RESOURCE_AVAILABILITY_ICON = new URL('../figma/screenshots/resource-availability-icon@1.5x.png', import.meta.url).href
-const DISTRIBUTED_PV_CAPACITY_ICON = new URL('../figma/screenshots/distributed-pv-capacity-icon@1x.png', import.meta.url).href
-const DISTRIBUTED_WIND_CAPACITY_ICON = new URL('../figma/screenshots/distributed-wind-capacity-icon@1x.png', import.meta.url).href
-const INTERRUPTIBLE_LOAD_SCALE_ICON = new URL('../figma/screenshots/interruptible-load-scale-icon@1x.png', import.meta.url).href
-const STORAGE_CALLABLE_CAPACITY_ICON = new URL('../figma/screenshots/storage-callable-capacity-icon@1x.png', import.meta.url).href
+const DISTRIBUTED_PV_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-pv-capacity.png', import.meta.url).href
+const DISTRIBUTED_WIND_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-wind-capacity.png', import.meta.url).href
+const INTERRUPTIBLE_LOAD_SCALE_ICON = new URL('./assets/images/dashboard-icons/interruptible-load-scale.png', import.meta.url).href
+const STORAGE_CALLABLE_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/storage-callable-capacity.png', import.meta.url).href
 const HEADER_BG_MOTION = new URL('../figma/screenshots/header-bg-motion@1x.png', import.meta.url).href
+const PANEL_HEADER_MOTION = new URL('../figma/screenshots/panel-header-motion@1.5x.png', import.meta.url).href
 const RESOURCE_TYPE_PIE_TOP = new URL('../figma/screenshots/resource-type-pie-top@1x.svg', import.meta.url).href
 const RESOURCE_TYPE_PIE_CENTER = new URL('../figma/screenshots/resource-type-pie-center@1x.png', import.meta.url).href
 
@@ -98,14 +99,18 @@ const resourceCapacityCards = [
 ]
 
 const resourceTypeLegendItems = [
-  { label: '分布式光伏', value: '87.9%', color: '#dfce53' },
-  { label: '小微风电', value: '87.9%', color: '#00d9ff' },
-  { label: '可控工业负荷', value: '87.9%', color: '#df5be2' },
-  { label: '可控商业负荷', value: '87.9%', color: '#0fd73e' },
-  { label: '电化学储能', value: '87.9%', color: '#e89644' },
-  { label: '用户侧储能', value: '87.9%', color: '#fe5f85' },
-  { label: '公共充电桩', value: '87.9%', color: '#917bff' },
+  { label: '分布式光伏', installedCapacity: 286.4, adjustableRatio: 86.5, color: '#dfce53' },
+  { label: '小微风电', installedCapacity: 56.8, adjustableRatio: 74.2, color: '#00d9ff' },
+  { label: '可控工业负荷', installedCapacity: 168.5, adjustableRatio: 91.3, color: '#df5be2' },
+  { label: '可控商业负荷', installedCapacity: 87.2, adjustableRatio: 88.7, color: '#0fd73e' },
+  { label: '电化学储能', installedCapacity: 63.5, adjustableRatio: 82.6, color: '#e89644' },
+  { label: '用户侧储能', installedCapacity: 51.6, adjustableRatio: 79.4, color: '#fe5f85' },
+  { label: '公共充电桩', installedCapacity: 34.2, adjustableRatio: 68.8, color: '#917bff' },
 ]
+
+const resourceTypeTotalCapacity = computed(() =>
+  resourceTypeLegendItems.reduce((total, item) => total + item.installedCapacity, 0),
+)
 
 const resourceTypeAbilityItems = resourceTypeLegendItems.slice(0, 5)
 
@@ -121,12 +126,12 @@ const resourceQuantityBars = [
 ]
 
 const industryDistributionBars = [
-  { label: '光伏居民', value: 746 },
-  { label: '光伏居民', value: 728 },
-  { label: '光伏居民', value: 1033 },
-  { label: '光伏居民', value: 880 },
-  { label: '光伏居民', value: 665 },
-  { label: '光伏居民', value: 880 },
+  { label: '工业制造', value: 750 },
+  { label: '商超商业', value: 730 },
+  { label: '政务公共', value: 1040 },
+  { label: '文旅产业', value: 890 },
+  { label: '农业园区', value: 670 },
+  { label: '居民小区', value: 890 },
 ]
 
 const mapLegendItems = [
@@ -169,12 +174,17 @@ const resourceTypePieChartRef = ref(null)
 const resourceQuantityBarChartRef = ref(null)
 const industryDistributionBarChartRef = ref(null)
 const headerMotionLoaded = ref(false)
+const panelHeaderMotionLoaded = ref(false)
+const dataMotionResetting = ref(false)
 const scoreProgress = ref(0)
 let resourceTypePieChart = null
 let resourceQuantityBarChart = null
 let industryDistributionBarChart = null
 let scoreAnimationFrame = 0
+let dataMotionRestartFrame = 0
+let dataRefreshTimer = 0
 const SCORE_ANIMATION_DURATION = 1200
+const DATA_MOTION_REFRESH_INTERVAL = 5 * 60 * 1000
 
 const isPortrait = computed(() => viewport.value.height > viewport.value.width)
 
@@ -237,6 +247,11 @@ function displayScoreValue(value) {
   return formatScoreValue(meta.target * progress, meta)
 }
 
+function formatResourceTypeShare(installedCapacity) {
+  const share = (installedCapacity / resourceTypeTotalCapacity.value) * 100
+  return `${share.toFixed(1)}%`
+}
+
 function startScoreAnimation() {
   const startTime = performance.now()
 
@@ -250,6 +265,30 @@ function startScoreAnimation() {
 
   scoreProgress.value = 0
   scoreAnimationFrame = requestAnimationFrame(tick)
+}
+
+function replayDataAnimations() {
+  cancelAnimationFrame(scoreAnimationFrame)
+  cancelAnimationFrame(dataMotionRestartFrame)
+  dataMotionResetting.value = true
+
+  dataMotionRestartFrame = requestAnimationFrame(() => {
+    resourceTypePieChart?.dispose()
+    resourceQuantityBarChart?.dispose()
+    industryDistributionBarChart?.dispose()
+    resourceTypePieChart = null
+    resourceQuantityBarChart = null
+    industryDistributionBarChart = null
+
+    initResourceTypePieChart()
+    initResourceQuantityBarChart()
+    initIndustryDistributionBarChart()
+
+    dataMotionRestartFrame = requestAnimationFrame(() => {
+      dataMotionResetting.value = false
+      startScoreAnimation()
+    })
+  })
 }
 
 function toggleMarkerType(type) {
@@ -285,7 +324,7 @@ function initResourceTypePieChart() {
 
   const makePieData = () =>
     resourceTypeLegendItems.map((item) => ({
-      value: 87.9,
+      value: item.installedCapacity,
       itemStyle: {
         color: new graphic.LinearGradient(0, 0, 1, 1, [
           { offset: 0, color: item.color },
@@ -299,7 +338,7 @@ function initResourceTypePieChart() {
     clockwise: true,
     startAngle: 106,
     avoidLabelOverlap: false,
-    minAngle: 12,
+    minAngle: 0,
     padAngle: 0,
     silent: true,
     label: { show: false },
@@ -483,7 +522,7 @@ function initIndustryDistributionBarChart() {
       splitLine: {
         lineStyle: {
           color: 'rgba(40, 105, 170, 0.42)',
-          type: [3, 5],
+          type: [6, 8],
           width: 1,
         },
       },
@@ -496,11 +535,21 @@ function initIndustryDistributionBarChart() {
         itemStyle: {
           borderRadius: [4, 4, 0, 0],
           color: new graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#1ef995' },
-            { offset: 1, color: 'rgba(30, 249, 149, 0.3)' },
+            { offset: 0, color: '#1ef39c' },
+            { offset: 1, color: 'rgba(30, 243, 156, 0.2)' },
           ]),
           shadowBlur: 10,
           shadowColor: 'rgba(30, 249, 149, 0.28)',
+        },
+        markLine: {
+          symbol: 'none',
+          silent: true,
+          label: { show: false },
+          lineStyle: {
+            color: '#049df0',
+            width: 2,
+          },
+          data: [{ yAxis: 300 }],
         },
       },
     ],
@@ -513,12 +562,15 @@ onMounted(() => {
   initResourceQuantityBarChart()
   initIndustryDistributionBarChart()
   startScoreAnimation()
+  dataRefreshTimer = window.setInterval(replayDataAnimations, DATA_MOTION_REFRESH_INTERVAL)
   window.addEventListener('resize', updateViewport)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updateViewport)
   cancelAnimationFrame(scoreAnimationFrame)
+  cancelAnimationFrame(dataMotionRestartFrame)
+  window.clearInterval(dataRefreshTimer)
   resourceTypePieChart?.dispose()
   resourceQuantityBarChart?.dispose()
   industryDistributionBarChart?.dispose()
@@ -530,7 +582,11 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="dashboard-viewport">
-    <section class="dashboard-stage" :style="screenStageStyle">
+    <section
+      class="dashboard-stage"
+      :class="{ 'dashboard-stage--data-motion-resetting': dataMotionResetting }"
+      :style="screenStageStyle"
+    >
       <MapScene ref="mapSceneRef" :visible-marker-types="visibleMarkerTypes" />
 
       <div class="layout-shell">
@@ -579,6 +635,13 @@ onBeforeUnmount(() => {
 
         <section class="layout-panel layout-panel--left-top">
           <header class="today-panel__header">
+            <img
+              class="panel-header__motion-bg"
+              :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
+              :src="PANEL_HEADER_MOTION"
+              alt=""
+              @load="panelHeaderMotionLoaded = true"
+            >
             <h2 data-text="今日运行情况">
               <span>今日运行情况</span>
             </h2>
@@ -624,8 +687,15 @@ onBeforeUnmount(() => {
 
         <section class="layout-panel layout-panel--left-bottom">
           <header class="screen-panel__header">
-            <h2 data-text="今日运行情况">
-              <span>今日运行情况</span>
+            <img
+              class="panel-header__motion-bg"
+              :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
+              :src="PANEL_HEADER_MOTION"
+              alt=""
+              @load="panelHeaderMotionLoaded = true"
+            >
+            <h2 data-text="资源类别分布">
+              <span>资源类别分布</span>
             </h2>
           </header>
           <div class="screen-panel__content">
@@ -649,6 +719,13 @@ onBeforeUnmount(() => {
 
         <section class="layout-panel layout-panel--right-top">
           <header class="screen-panel__header">
+            <img
+              class="panel-header__motion-bg"
+              :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
+              :src="PANEL_HEADER_MOTION"
+              alt=""
+              @load="panelHeaderMotionLoaded = true"
+            >
             <h2 data-text="资源类型结构分析">
               <span>资源类型结构分析</span>
             </h2>
@@ -676,7 +753,7 @@ onBeforeUnmount(() => {
                   >
                     <i :style="{ backgroundColor: item.color }" />
                     <span>{{ item.label }}</span>
-                    <strong :style="{ color: item.color }">{{ displayScoreValue(item.value) }}</strong>
+                    <strong :style="{ color: item.color }">{{ displayScoreValue(formatResourceTypeShare(item.installedCapacity)) }}</strong>
                   </div>
                 </div>
               </div>
@@ -699,9 +776,9 @@ onBeforeUnmount(() => {
                 >
                   <span>{{ item.label }}</span>
                   <div class="resource-structure-panel__bar-track">
-                    <i :style="{ '--bar-color': item.color }" />
+                    <i :style="{ '--bar-color': item.color, '--bar-width': `${item.adjustableRatio}%` }" />
                   </div>
-                  <strong :style="{ color: item.color }">{{ displayScoreValue(item.value) }}</strong>
+                  <strong :style="{ color: item.color }">{{ displayScoreValue(`${item.adjustableRatio}%`) }}</strong>
                 </div>
               </div>
             </div>
@@ -710,6 +787,13 @@ onBeforeUnmount(() => {
 
         <section class="layout-panel layout-panel--right-middle">
           <header class="screen-panel__header">
+            <img
+              class="panel-header__motion-bg"
+              :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
+              :src="PANEL_HEADER_MOTION"
+              alt=""
+              @load="panelHeaderMotionLoaded = true"
+            >
             <h2 data-text="分布式资源数量结构">
               <span>分布式资源数量结构</span>
             </h2>
@@ -723,6 +807,13 @@ onBeforeUnmount(() => {
 
         <section class="layout-panel layout-panel--right-bottom">
           <header class="screen-panel__header">
+            <img
+              class="panel-header__motion-bg"
+              :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
+              :src="PANEL_HEADER_MOTION"
+              alt=""
+              @load="panelHeaderMotionLoaded = true"
+            >
             <h2 data-text="行业分布">
               <span>行业分布</span>
             </h2>
@@ -801,6 +892,70 @@ onBeforeUnmount(() => {
   100% {
     opacity: 1;
     transform: scaleX(1);
+  }
+}
+
+@keyframes layoutEnterFromTop {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -48px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes layoutEnterFromBottom {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 48px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes layoutEnterFromLeft {
+  from {
+    opacity: 0;
+    transform: translate3d(-64px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes layoutEnterFromRight {
+  from {
+    opacity: 0;
+    transform: translate3d(64px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.dashboard-stage--data-motion-resetting {
+  .resource-structure-panel__legend-item strong,
+  .resource-structure-panel__bar-item strong,
+  .resource-structure-panel__bar-track i,
+  .resource-panel__stat-card strong,
+  .resource-panel__stat-card span,
+  .today-panel__stat-card strong,
+  .today-panel__stat-card span,
+  .today-panel__progress-row strong,
+  .today-panel__progress-track i,
+  .layout-map-stat strong,
+  .layout-map-stat span {
+    animation: none;
   }
 }
 
@@ -888,6 +1043,7 @@ onBeforeUnmount(() => {
   height: 82px;
   overflow: hidden;
   background: url('../figma/screenshots/header-bg@1.5x.png') center top / 1920px 82px no-repeat;
+  animation: layoutEnterFromTop 680ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 .layout-header__motion-bg {
@@ -1029,6 +1185,7 @@ onBeforeUnmount(() => {
   width: 1920px;
   height: 32px;
   background: url('../figma/screenshots/footer-bg@1.5x.png') center bottom / 1920px 32px no-repeat;
+  animation: layoutEnterFromBottom 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 560ms both;
 }
 
 .layout-panel {
@@ -1042,30 +1199,35 @@ onBeforeUnmount(() => {
   top: 82px;
   left: 20px;
   height: 568px;
+  animation: layoutEnterFromLeft 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both;
 }
 
 .layout-panel--left-bottom {
   top: 666px;
   left: 20px;
   height: 372px;
+  animation: layoutEnterFromLeft 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 260ms both;
 }
 
 .layout-panel--right-top {
   top: 82px;
   right: 20px;
   height: 403px;
+  animation: layoutEnterFromRight 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 160ms both;
 }
 
 .layout-panel--right-middle {
   top: 502px;
   right: 20px;
   height: 258px;
+  animation: layoutEnterFromRight 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
 }
 
 .layout-panel--right-bottom {
   top: 776px;
   right: 20px;
   height: 257px;
+  animation: layoutEnterFromRight 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 440ms both;
 }
 
 .screen-panel__header,
@@ -1076,10 +1238,28 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: url('../figma/screenshots/panel-today-header@1.5x.png') left top / 420px 38px no-repeat;
 
+  .panel-header__motion-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    width: 420px;
+    height: 38px;
+    object-fit: fill;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms linear;
+  }
+
+  .panel-header__motion-bg--loaded {
+    opacity: 1;
+  }
+
   h2 {
     position: absolute;
     top: 1px;
     left: 48px;
+    z-index: 2;
     width: 220px;
     height: 29px;
     margin: 0;
@@ -1423,7 +1603,7 @@ onBeforeUnmount(() => {
 }
 
 .resource-structure-panel__bar-track i {
-  width: 87.9%;
+  width: var(--bar-width);
   height: 4px;
   border-radius: 100px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--bar-color) 20%, transparent), var(--bar-color));
@@ -1594,7 +1774,6 @@ onBeforeUnmount(() => {
   left: 2px;
   width: 296px;
   height: 6px;
-  border: 1px solid rgba(0, 208, 255, 0.48);
   border-radius: 4px;
   background: rgba(1, 13, 24, 0.72);
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.68);
@@ -1656,6 +1835,7 @@ onBeforeUnmount(() => {
   gap: 20px;
   width: 742px;
   height: 88px;
+  animation: layoutEnterFromTop 680ms cubic-bezier(0.22, 0.61, 0.36, 1) 180ms both;
 }
 
 .layout-map-stat {
@@ -1710,6 +1890,7 @@ onBeforeUnmount(() => {
   width: 190px;
   height: 50px;
   pointer-events: auto;
+  animation: layoutEnterFromBottom 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 460ms both;
 }
 
 .layout-control-button {
@@ -1753,6 +1934,7 @@ onBeforeUnmount(() => {
   padding: 6px 55.86px;
   background: url('../figma/screenshots/map-legend-bg@1.5x.png') center / 658px 34px no-repeat;
   pointer-events: auto;
+  animation: layoutEnterFromBottom 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 520ms both;
 }
 
 .layout-map-legend__item {
@@ -1790,5 +1972,20 @@ onBeforeUnmount(() => {
 .layout-map-legend__item--inactive {
   opacity: 0.36;
   filter: saturate(0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-header,
+  .layout-footer,
+  .layout-panel--left-top,
+  .layout-panel--left-bottom,
+  .layout-panel--right-top,
+  .layout-panel--right-middle,
+  .layout-panel--right-bottom,
+  .layout-map-stats,
+  .layout-map-controls,
+  .layout-map-legend {
+    animation: none;
+  }
 }
 </style>
