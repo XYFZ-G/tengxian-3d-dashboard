@@ -185,8 +185,11 @@ let industryDistributionBarChart = null
 let scoreAnimationFrame = 0
 let dataMotionRestartFrame = 0
 let dataRefreshTimer = 0
+let dashboardLoadingTimeout = 0
+let dashboardRevealRequested = false
 const SCORE_ANIMATION_DURATION = 1200
 const DATA_MOTION_REFRESH_INTERVAL = 5 * 60 * 1000
+const DASHBOARD_LOADING_TIMEOUT = 60 * 1000
 
 const isPortrait = computed(() => viewport.value.height > viewport.value.width)
 
@@ -213,7 +216,11 @@ function updateViewport() {
 }
 
 function waitForDashboardImages() {
-  const images = Array.from(dashboardStageRef.value?.querySelectorAll('img') || [])
+  const images = Array.from(
+    dashboardStageRef.value?.querySelectorAll(
+      'img:not(.layout-header__motion-bg):not(.panel-header__motion-bg)',
+    ) || [],
+  )
 
   return Promise.all(images.map((image) => {
     if (image.complete) return Promise.resolve()
@@ -225,15 +232,23 @@ function waitForDashboardImages() {
   }))
 }
 
+function revealDashboard() {
+  if (dashboardReady.value || dashboardRevealRequested) return
+
+  dashboardRevealRequested = true
+  window.clearTimeout(dashboardLoadingTimeout)
+  window.requestAnimationFrame(() => {
+    dashboardReady.value = true
+  })
+}
+
 async function finishDashboardLoading() {
   await Promise.all([
     waitForDashboardImages(),
     document.fonts?.ready || Promise.resolve(),
   ])
 
-  window.requestAnimationFrame(() => {
-    dashboardReady.value = true
-  })
+  revealDashboard()
 }
 
 function parseScoreValue(value) {
@@ -589,6 +604,7 @@ onMounted(() => {
   initIndustryDistributionBarChart()
   startScoreAnimation()
   dataRefreshTimer = window.setInterval(replayDataAnimations, DATA_MOTION_REFRESH_INTERVAL)
+  dashboardLoadingTimeout = window.setTimeout(revealDashboard, DASHBOARD_LOADING_TIMEOUT)
   window.addEventListener('resize', updateViewport)
 })
 
@@ -597,6 +613,7 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(scoreAnimationFrame)
   cancelAnimationFrame(dataMotionRestartFrame)
   window.clearInterval(dataRefreshTimer)
+  window.clearTimeout(dashboardLoadingTimeout)
   resourceTypePieChart?.dispose()
   resourceQuantityBarChart?.dispose()
   industryDistributionBarChart?.dispose()
