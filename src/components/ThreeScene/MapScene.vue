@@ -12,6 +12,8 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits(['ready'])
+
 const sceneContainer = ref(null)
 
 let overlayFrameId = 0
@@ -95,6 +97,10 @@ onMounted(() => {
   interaction.bind()
   iconPoints.bind()
   updateOverlayPositions()
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => emit('ready'))
+  })
 })
 
 onBeforeUnmount(() => {

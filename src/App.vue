@@ -176,6 +176,8 @@ const industryDistributionBarChartRef = ref(null)
 const headerMotionLoaded = ref(false)
 const panelHeaderMotionLoaded = ref(false)
 const dataMotionResetting = ref(false)
+const dashboardStageRef = ref(null)
+const dashboardReady = ref(false)
 const scoreProgress = ref(0)
 let resourceTypePieChart = null
 let resourceQuantityBarChart = null
@@ -208,6 +210,30 @@ function updateViewport() {
   resourceTypePieChart?.resize()
   resourceQuantityBarChart?.resize()
   industryDistributionBarChart?.resize()
+}
+
+function waitForDashboardImages() {
+  const images = Array.from(dashboardStageRef.value?.querySelectorAll('img') || [])
+
+  return Promise.all(images.map((image) => {
+    if (image.complete) return Promise.resolve()
+
+    return new Promise((resolve) => {
+      image.addEventListener('load', resolve, { once: true })
+      image.addEventListener('error', resolve, { once: true })
+    })
+  }))
+}
+
+async function finishDashboardLoading() {
+  await Promise.all([
+    waitForDashboardImages(),
+    document.fonts?.ready || Promise.resolve(),
+  ])
+
+  window.requestAnimationFrame(() => {
+    dashboardReady.value = true
+  })
 }
 
 function parseScoreValue(value) {
@@ -583,11 +609,15 @@ onBeforeUnmount(() => {
 <template>
   <main class="dashboard-viewport">
     <section
+      ref="dashboardStageRef"
       class="dashboard-stage"
-      :class="{ 'dashboard-stage--data-motion-resetting': dataMotionResetting }"
+      :class="{
+        'dashboard-stage--data-motion-resetting': dataMotionResetting,
+        'dashboard-stage--ready': dashboardReady,
+      }"
       :style="screenStageStyle"
     >
-      <MapScene ref="mapSceneRef" :visible-marker-types="visibleMarkerTypes" />
+      <MapScene ref="mapSceneRef" :visible-marker-types="visibleMarkerTypes" @ready="finishDashboardLoading" />
 
       <div class="layout-shell">
         <div class="layout-mask layout-mask--left" />
@@ -867,6 +897,11 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </section>
+
+    <section v-if="!dashboardReady" class="dashboard-loading" aria-live="polite" aria-label="大屏加载中">
+      <div class="dashboard-loading__orb" />
+      <p>系统加载中</p>
+    </section>
   </main>
 </template>
 
@@ -966,6 +1001,40 @@ onBeforeUnmount(() => {
   background: #030b18;
 }
 
+.dashboard-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  gap: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(12, 102, 174, 0.24), transparent 23%),
+    #030b18;
+  color: #8df8ff;
+  font-family: 'YouSheBiaoTiHei', 'Microsoft YaHei', sans-serif;
+  letter-spacing: 4px;
+}
+
+.dashboard-loading__orb {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto;
+  border: 3px solid rgba(89, 239, 255, 0.2);
+  border-top-color: #63f5ff;
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(45, 222, 255, 0.5);
+  animation: dashboardLoadingSpin 900ms linear infinite;
+}
+
+.dashboard-loading p {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+  text-shadow: 0 0 12px rgba(45, 222, 255, 0.65);
+}
+
 .dashboard-stage {
   --data-enter-duration: 680ms;
   --data-fill-duration: 900ms;
@@ -979,6 +1048,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
   transform-origin: center center;
   background: #061224;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 280ms ease;
+}
+
+.dashboard-stage--ready {
+  opacity: 1;
+  visibility: visible;
 }
 
 .layout-shell {
@@ -1036,7 +1113,7 @@ onBeforeUnmount(() => {
   z-index: 2;
 }
 
-.layout-header {
+.dashboard-stage--ready .layout-header {
   top: 0;
   left: 0;
   width: 1920px;
@@ -1179,7 +1256,7 @@ onBeforeUnmount(() => {
   content: '';
 }
 
-.layout-footer {
+.dashboard-stage--ready .layout-footer {
   bottom: 0;
   left: 0;
   width: 1920px;
@@ -1195,35 +1272,35 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-.layout-panel--left-top {
+.dashboard-stage--ready .layout-panel--left-top {
   top: 82px;
   left: 20px;
   height: 568px;
   animation: layoutEnterFromLeft 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 120ms both;
 }
 
-.layout-panel--left-bottom {
+.dashboard-stage--ready .layout-panel--left-bottom {
   top: 666px;
   left: 20px;
   height: 372px;
   animation: layoutEnterFromLeft 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 260ms both;
 }
 
-.layout-panel--right-top {
+.dashboard-stage--ready .layout-panel--right-top {
   top: 82px;
   right: 20px;
   height: 403px;
   animation: layoutEnterFromRight 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 160ms both;
 }
 
-.layout-panel--right-middle {
+.dashboard-stage--ready .layout-panel--right-middle {
   top: 502px;
   right: 20px;
   height: 258px;
   animation: layoutEnterFromRight 760ms cubic-bezier(0.22, 0.61, 0.36, 1) 300ms both;
 }
 
-.layout-panel--right-bottom {
+.dashboard-stage--ready .layout-panel--right-bottom {
   top: 776px;
   right: 20px;
   height: 257px;
@@ -1827,7 +1904,7 @@ onBeforeUnmount(() => {
   background: url('../figma/screenshots/stat-card-wide-bg@1.5x.png') center / 388px 55px no-repeat;
 }
 
-.layout-map-stats {
+.dashboard-stage--ready .layout-map-stats {
   top: 110px;
   left: 589px;
   display: grid;
@@ -1881,7 +1958,7 @@ onBeforeUnmount(() => {
   letter-spacing: 0;
 }
 
-.layout-map-controls {
+.dashboard-stage--ready .layout-map-controls {
   top: 918px;
   left: 865px;
   display: grid;
@@ -1922,7 +1999,7 @@ onBeforeUnmount(() => {
   height: 14px;
 }
 
-.layout-map-legend {
+.dashboard-stage--ready .layout-map-legend {
   top: 1002px;
   left: 631px;
   display: flex;
@@ -1986,6 +2063,12 @@ onBeforeUnmount(() => {
   .layout-map-controls,
   .layout-map-legend {
     animation: none;
+  }
+}
+
+@keyframes dashboardLoadingSpin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>
