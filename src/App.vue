@@ -10,21 +10,23 @@ use([BarChart, PieChart, GridComponent, CanvasRenderer])
 
 const DESIGN_WIDTH = 1920
 const DESIGN_HEIGHT = 1080
-const TOTAL_USERS_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-users.png', import.meta.url).href
-const TOTAL_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-capacity.png', import.meta.url).href
-const PEAK_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/peak-shaving-capacity.png', import.meta.url).href
-const VALLEY_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/valley-filling-capacity.png', import.meta.url).href
-const RESOURCE_ACCESS_ICON = new URL('../figma/screenshots/resource-access-rate-icon@1x.png', import.meta.url).href
-const RESOURCE_ONLINE_ICON = new URL('../figma/screenshots/resource-online-rate-icon@1.5x.png', import.meta.url).href
-const RESOURCE_AVAILABILITY_ICON = new URL('../figma/screenshots/resource-availability-icon@1.5x.png', import.meta.url).href
-const DISTRIBUTED_PV_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-pv-capacity.png', import.meta.url).href
-const DISTRIBUTED_WIND_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-wind-capacity.png', import.meta.url).href
-const INTERRUPTIBLE_LOAD_SCALE_ICON = new URL('./assets/images/dashboard-icons/interruptible-load-scale.png', import.meta.url).href
-const STORAGE_CALLABLE_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/storage-callable-capacity.png', import.meta.url).href
-const HEADER_BG_MOTION = new URL('../figma/screenshots/header-bg-motion@1x.png', import.meta.url).href
-const PANEL_HEADER_MOTION = new URL('../figma/screenshots/panel-header-motion@1.5x.png', import.meta.url).href
+const TOTAL_USERS_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-users.webp', import.meta.url).href
+const TOTAL_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/total-aggregated-capacity.webp', import.meta.url).href
+const PEAK_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/peak-shaving-capacity.webp', import.meta.url).href
+const VALLEY_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/valley-filling-capacity.webp', import.meta.url).href
+const RESOURCE_ACCESS_ICON = new URL('../figma/screenshots/resource-access-rate-icon@1x.webp', import.meta.url).href
+const RESOURCE_ONLINE_ICON = new URL('../figma/screenshots/resource-online-rate-icon@1.5x.webp', import.meta.url).href
+const RESOURCE_AVAILABILITY_ICON = new URL('../figma/screenshots/resource-availability-icon@1.5x.webp', import.meta.url).href
+const DISTRIBUTED_PV_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-pv-capacity.webp', import.meta.url).href
+const DISTRIBUTED_WIND_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/distributed-wind-capacity.webp', import.meta.url).href
+const INTERRUPTIBLE_LOAD_SCALE_ICON = new URL('./assets/images/dashboard-icons/interruptible-load-scale.webp', import.meta.url).href
+const STORAGE_CALLABLE_CAPACITY_ICON = new URL('./assets/images/dashboard-icons/storage-callable-capacity.webp', import.meta.url).href
+const HEADER_BG_MOTION_WEBP = new URL('../figma/screenshots/header-bg-motion@1x.webp', import.meta.url).href
+const PANEL_HEADER_MOTION_WEBP = new URL('../figma/screenshots/panel-header-motion@1.5x.webp', import.meta.url).href
+const HEADER_BG_MOTION_APNG = new URL('../figma/screenshots/header-bg-motion@1x.png', import.meta.url).href
+const PANEL_HEADER_MOTION_APNG = new URL('../figma/screenshots/panel-header-motion@1.5x.png', import.meta.url).href
 const RESOURCE_TYPE_PIE_TOP = new URL('../figma/screenshots/resource-type-pie-top@1x.svg', import.meta.url).href
-const RESOURCE_TYPE_PIE_CENTER = new URL('../figma/screenshots/resource-type-pie-center@1x.png', import.meta.url).href
+const RESOURCE_TYPE_PIE_CENTER = new URL('../figma/screenshots/resource-type-pie-center@1x.webp', import.meta.url).href
 
 const todayStatCards = [
   {
@@ -175,6 +177,8 @@ const resourceQuantityBarChartRef = ref(null)
 const industryDistributionBarChartRef = ref(null)
 const headerMotionLoaded = ref(false)
 const panelHeaderMotionLoaded = ref(false)
+const headerMotionSource = ref(HEADER_BG_MOTION_WEBP)
+const panelHeaderMotionSource = ref(PANEL_HEADER_MOTION_WEBP)
 const dataMotionResetting = ref(false)
 const dashboardStageRef = ref(null)
 const dashboardReady = ref(false)
@@ -187,6 +191,10 @@ let dataMotionRestartFrame = 0
 let dataRefreshTimer = 0
 let dashboardLoadingTimeout = 0
 let dashboardRevealRequested = false
+let deferredMotionLoadHandler = null
+let deferredMotionIdleCallback = 0
+let deferredMotionLoadTimer = 0
+let canApplyDeferredMotion = true
 const SCORE_ANIMATION_DURATION = 1200
 const DATA_MOTION_REFRESH_INTERVAL = 5 * 60 * 1000
 const DASHBOARD_LOADING_TIMEOUT = 60 * 1000
@@ -230,6 +238,52 @@ function waitForDashboardImages() {
       image.addEventListener('error', resolve, { once: true })
     })
   }))
+}
+
+function preloadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = resolve
+    image.onerror = reject
+    image.src = source
+  })
+}
+
+function loadDeferredMotionAssets() {
+  preloadImage(HEADER_BG_MOTION_APNG)
+    .then(() => {
+      if (canApplyDeferredMotion) headerMotionSource.value = HEADER_BG_MOTION_APNG
+    })
+    .catch(() => {
+      // 动图加载失败时继续使用首屏已展示的 WebP 静态图。
+    })
+
+  preloadImage(PANEL_HEADER_MOTION_APNG)
+    .then(() => {
+      if (canApplyDeferredMotion) panelHeaderMotionSource.value = PANEL_HEADER_MOTION_APNG
+    })
+    .catch(() => {
+      // 动图加载失败时继续使用首屏已展示的 WebP 静态图。
+    })
+}
+
+function scheduleDeferredMotionAssets() {
+  const requestDeferredLoad = () => {
+    if (typeof window.requestIdleCallback === 'function') {
+      deferredMotionIdleCallback = window.requestIdleCallback(loadDeferredMotionAssets, { timeout: 8000 })
+      return
+    }
+
+    deferredMotionLoadTimer = window.setTimeout(loadDeferredMotionAssets, 1500)
+  }
+
+  if (document.readyState === 'complete') {
+    requestDeferredLoad()
+    return
+  }
+
+  deferredMotionLoadHandler = requestDeferredLoad
+  window.addEventListener('load', deferredMotionLoadHandler, { once: true })
 }
 
 function revealDashboard() {
@@ -606,14 +660,23 @@ onMounted(() => {
   dataRefreshTimer = window.setInterval(replayDataAnimations, DATA_MOTION_REFRESH_INTERVAL)
   dashboardLoadingTimeout = window.setTimeout(revealDashboard, DASHBOARD_LOADING_TIMEOUT)
   window.addEventListener('resize', updateViewport)
+  scheduleDeferredMotionAssets()
 })
 
 onBeforeUnmount(() => {
+  canApplyDeferredMotion = false
   window.removeEventListener('resize', updateViewport)
+  if (deferredMotionLoadHandler) {
+    window.removeEventListener('load', deferredMotionLoadHandler)
+  }
+  if (deferredMotionIdleCallback && typeof window.cancelIdleCallback === 'function') {
+    window.cancelIdleCallback(deferredMotionIdleCallback)
+  }
   cancelAnimationFrame(scoreAnimationFrame)
   cancelAnimationFrame(dataMotionRestartFrame)
   window.clearInterval(dataRefreshTimer)
   window.clearTimeout(dashboardLoadingTimeout)
+  window.clearTimeout(deferredMotionLoadTimer)
   resourceTypePieChart?.dispose()
   resourceQuantityBarChart?.dispose()
   industryDistributionBarChart?.dispose()
@@ -646,7 +709,7 @@ onBeforeUnmount(() => {
           <img
             class="layout-header__motion-bg"
             :class="{ 'layout-header__motion-bg--loaded': headerMotionLoaded }"
-            :src="HEADER_BG_MOTION"
+            :src="headerMotionSource"
             alt=""
             @load="headerMotionLoaded = true"
           >
@@ -685,7 +748,7 @@ onBeforeUnmount(() => {
             <img
               class="panel-header__motion-bg"
               :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
-              :src="PANEL_HEADER_MOTION"
+              :src="panelHeaderMotionSource"
               alt=""
               @load="panelHeaderMotionLoaded = true"
             >
@@ -737,7 +800,7 @@ onBeforeUnmount(() => {
             <img
               class="panel-header__motion-bg"
               :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
-              :src="PANEL_HEADER_MOTION"
+              :src="panelHeaderMotionSource"
               alt=""
               @load="panelHeaderMotionLoaded = true"
             >
@@ -769,7 +832,7 @@ onBeforeUnmount(() => {
             <img
               class="panel-header__motion-bg"
               :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
-              :src="PANEL_HEADER_MOTION"
+              :src="panelHeaderMotionSource"
               alt=""
               @load="panelHeaderMotionLoaded = true"
             >
@@ -837,7 +900,7 @@ onBeforeUnmount(() => {
             <img
               class="panel-header__motion-bg"
               :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
-              :src="PANEL_HEADER_MOTION"
+              :src="panelHeaderMotionSource"
               alt=""
               @load="panelHeaderMotionLoaded = true"
             >
@@ -857,7 +920,7 @@ onBeforeUnmount(() => {
             <img
               class="panel-header__motion-bg"
               :class="{ 'panel-header__motion-bg--loaded': panelHeaderMotionLoaded }"
-              :src="PANEL_HEADER_MOTION"
+              :src="panelHeaderMotionSource"
               alt=""
               @load="panelHeaderMotionLoaded = true"
             >
@@ -1136,7 +1199,7 @@ onBeforeUnmount(() => {
   width: 1920px;
   height: 82px;
   overflow: hidden;
-  background: url('../figma/screenshots/header-bg@1.5x.png') center top / 1920px 82px no-repeat;
+  background: url('../figma/screenshots/header-bg@1.5x.webp') center top / 1920px 82px no-repeat;
   animation: layoutEnterFromTop 680ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
@@ -1278,7 +1341,7 @@ onBeforeUnmount(() => {
   left: 0;
   width: 1920px;
   height: 32px;
-  background: url('../figma/screenshots/footer-bg@1.5x.png') center bottom / 1920px 32px no-repeat;
+  background: url('../figma/screenshots/footer-bg@1.5x.webp') center bottom / 1920px 32px no-repeat;
   animation: layoutEnterFromBottom 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 560ms both;
 }
 
@@ -1330,7 +1393,7 @@ onBeforeUnmount(() => {
   width: 420px;
   height: 38px;
   overflow: hidden;
-  background: url('../figma/screenshots/panel-today-header@1.5x.png') left top / 420px 38px no-repeat;
+  background: url('../figma/screenshots/panel-today-header@1.5x.webp') left top / 420px 38px no-repeat;
 
   .panel-header__motion-bg {
     position: absolute;
@@ -1448,13 +1511,13 @@ onBeforeUnmount(() => {
 .screen-panel__corner--left,
 .today-panel__corner--left {
   left: 0;
-  background: url('../figma/screenshots/panel-content-bottom-left-deco@1.5x.png') left bottom / 76px 76px no-repeat;
+  background: url('../figma/screenshots/panel-content-bottom-left-deco@1.5x.webp') left bottom / 76px 76px no-repeat;
 }
 
 .screen-panel__corner--right,
 .today-panel__corner--right {
   right: 0;
-  background: url('../figma/screenshots/panel-content-bottom-right-deco@1.5x.png') right bottom / 76px 76px no-repeat;
+  background: url('../figma/screenshots/panel-content-bottom-right-deco@1.5x.webp') right bottom / 76px 76px no-repeat;
 }
 
 .resource-quantity-panel {
@@ -1505,11 +1568,11 @@ onBeforeUnmount(() => {
 }
 
 .resource-structure-panel__side-deco--left {
-  background-image: url('../figma/screenshots/resource-structure-side-left@1x.png');
+  background-image: url('../figma/screenshots/resource-structure-side-left@1x.webp');
 }
 
 .resource-structure-panel__side-deco--right {
-  background-image: url('../figma/screenshots/resource-structure-side-right@1x.png');
+  background-image: url('../figma/screenshots/resource-structure-side-right@1x.webp');
 }
 
 .resource-structure-panel__chart-main {
@@ -1647,11 +1710,11 @@ onBeforeUnmount(() => {
   display: block;
   width: 55px;
   height: 9px;
-  background: url('../figma/screenshots/resource-type-subtitle-left@1x.png') center / 55px 9px no-repeat;
+  background: url('../figma/screenshots/resource-type-subtitle-left@1x.webp') center / 55px 9px no-repeat;
 }
 
 .resource-structure-panel__subtitle-deco--right {
-  background-image: url('../figma/screenshots/resource-type-subtitle-right@1x.png');
+  background-image: url('../figma/screenshots/resource-type-subtitle-right@1x.webp');
 }
 
 .resource-structure-panel__subtitle-text {
@@ -1723,7 +1786,7 @@ onBeforeUnmount(() => {
   height: 150px;
   margin: 0;
   overflow: hidden;
-  background: url('../figma/screenshots/stat-card-bg@1.5x.png') center / 190px 150px no-repeat;
+  background: url('../figma/screenshots/stat-card-bg@1.5x.webp') center / 190px 150px no-repeat;
 }
 
 .resource-panel__stat-icon,
@@ -1799,7 +1862,7 @@ onBeforeUnmount(() => {
   height: 54px;
   margin: 0;
   overflow: hidden;
-  background: url('../figma/screenshots/stat-card-wide-bg@1.5x.png') center / 388px 54px no-repeat;
+  background: url('../figma/screenshots/stat-card-wide-bg@1.5x.webp') center / 388px 54px no-repeat;
 }
 
 .today-panel__progress-icon {
@@ -1904,7 +1967,7 @@ onBeforeUnmount(() => {
 .layout-stat-card {
   width: 190px;
   height: 150px;
-  background: url('../figma/screenshots/stat-card-bg@1.5x.png') center / 190px 150px no-repeat;
+  background: url('../figma/screenshots/stat-card-bg@1.5x.webp') center / 190px 150px no-repeat;
 }
 
 .layout-wide-list {
@@ -1918,7 +1981,7 @@ onBeforeUnmount(() => {
 
 .layout-wide-card {
   height: 55px;
-  background: url('../figma/screenshots/stat-card-wide-bg@1.5x.png') center / 388px 55px no-repeat;
+  background: url('../figma/screenshots/stat-card-wide-bg@1.5x.webp') center / 388px 55px no-repeat;
 }
 
 .dashboard-stage--ready .layout-map-stats {
@@ -1942,7 +2005,7 @@ onBeforeUnmount(() => {
   width: 234px;
   height: 88px;
   padding-top: 0;
-  background: url('../figma/screenshots/map-top-data-bg@1.5x.png') center / 234px 88px no-repeat;
+  background: url('../figma/screenshots/map-top-data-bg@1.5x.webp') center / 234px 88px no-repeat;
   text-align: center;
   white-space: nowrap;
 }
@@ -1999,7 +2062,7 @@ onBeforeUnmount(() => {
   padding: 0;
   border: 4px solid rgba(21, 104, 202, 0.2);
   border-radius: 100px;
-  background: url('../figma/screenshots/map-control-button-bg@1.5x.png') center / 50px 50px no-repeat;
+  background: url('../figma/screenshots/map-control-button-bg@1.5x.webp') center / 50px 50px no-repeat;
   color: #aed8ff;
   cursor: pointer;
   font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -2026,7 +2089,7 @@ onBeforeUnmount(() => {
   width: 658px;
   height: 34px;
   padding: 6px 55.86px;
-  background: url('../figma/screenshots/map-legend-bg@1.5x.png') center / 658px 34px no-repeat;
+  background: url('../figma/screenshots/map-legend-bg@1.5x.webp') center / 658px 34px no-repeat;
   pointer-events: auto;
   animation: layoutEnterFromBottom 620ms cubic-bezier(0.22, 0.61, 0.36, 1) 520ms both;
 }

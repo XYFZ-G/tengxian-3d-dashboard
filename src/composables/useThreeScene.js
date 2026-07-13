@@ -8,9 +8,9 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 
 // 可替换贴图槽位：后续换地图时只要保持文件名，地面纹理和旋转圆环会自动使用新素材。
-const GROUND_TECH_OVERLAY_URL = new URL('../assets/textures/ground-tech-overlay.png', import.meta.url).href
-const GROUND_EXTRA_OVERLAY_URL = new URL('../assets/textures/ground-extra-overlay.png', import.meta.url).href
-const MODEL_ORBIT_RING_URL = new URL('../assets/textures/model-orbit-ring.png', import.meta.url).href
+const GROUND_TECH_OVERLAY_URL = new URL('../assets/textures/ground-tech-overlay.webp', import.meta.url).href
+const GROUND_EXTRA_OVERLAY_URL = new URL('../assets/textures/ground-extra-overlay.webp', import.meta.url).href
+const MODEL_ORBIT_RING_URL = new URL('../assets/textures/model-orbit-ring.webp', import.meta.url).href
 
 // 地图基础比例和初始镜头。换地图后优先调 MAP_SCALE_SIZE、CAMERA_HOME_POSITION、CAMERA_HOME_TARGET。
 const DEFAULT_MAP_HEIGHT = 2.8
@@ -935,7 +935,7 @@ export function useThreeScene(containerRef) {
       streak.position.y += (floatOffset - (streak.userData.lastFloatOffset ?? 0))
       streak.userData.lastFloatOffset = floatOffset
       streak.material.opacity = fade * (streak.userData.maxOpacity ?? SPACE_LIGHT_STREAK_MAX_OPACITY)
-      streak.material.needsUpdate = true
+      // opacity 是已存在的材质 uniform，渲染器会在本帧上传它；标记 needsUpdate 会让 72 个粒子反复检查/重建程序，反而拖慢动画。
     })
   }
 
@@ -1029,11 +1029,14 @@ export function useThreeScene(containerRef) {
   function clearMap() {
     if (!mapGroup) return
     while (mapGroup.children.length) {
-      const child = mapGroup.children.pop()
+      const child = mapGroup.children[mapGroup.children.length - 1]
+      // 不能直接 pop children：那会保留 child.parent 的过期引用，后续重建地图时场景树状态会不一致。
+      mapGroup.remove(child)
       disposeObject3D(child)
     }
     while (labelMapGroup?.children.length) {
-      const child = labelMapGroup.children.pop()
+      const child = labelMapGroup.children[labelMapGroup.children.length - 1]
+      labelMapGroup.remove(child)
       disposeObject3D(child)
     }
     geoMarkerSprites = []

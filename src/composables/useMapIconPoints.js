@@ -1,11 +1,11 @@
 import * as THREE from 'three'
 import { reactive, ref } from 'vue'
 
-import chargingClusterIcon from '../assets/images/map-points/charging-cluster.png'
-import energyStorageIcon from '../assets/images/map-points/energy-storage.png'
-import industrialLoadIcon from '../assets/images/map-points/industrial-load.png'
-import solarStationIcon from '../assets/images/map-points/solar-station.png'
-import windStationIcon from '../assets/images/map-points/wind-station.png'
+import chargingClusterIcon from '../assets/images/map-points/charging-cluster.webp'
+import energyStorageIcon from '../assets/images/map-points/energy-storage.webp'
+import industrialLoadIcon from '../assets/images/map-points/industrial-load.webp'
+import solarStationIcon from '../assets/images/map-points/solar-station.webp'
+import windStationIcon from '../assets/images/map-points/wind-station.webp'
 
 const ICON_BY_TYPE = {
   光伏电站: solarStationIcon,

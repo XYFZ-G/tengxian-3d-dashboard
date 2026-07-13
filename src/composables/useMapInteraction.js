@@ -44,7 +44,7 @@ function setMeshState(mesh, isActive) {
       material.opacity = material.userData.defaultOpacity ?? 0.76
     }
 
-    material.needsUpdate = true
+    // color、emissive 和 opacity 都是现有 uniform，直接赋值即可；needsUpdate 会触发昂贵的材质程序检查。
   })
 }
 
@@ -65,7 +65,7 @@ function setLineState(line, isActive) {
     line.renderOrder = line.userData.defaultRenderOrder ?? 0
   }
 
-  material.needsUpdate = true
+  // LineMaterial 的颜色、线宽和透明度无需重新编译 shader，悬浮时只更新数值即可。
 }
 
 export function useMapInteraction({
@@ -85,6 +85,8 @@ export function useMapInteraction({
   const breadcrumbs = ref([{ name: '藤县', level: 'county' }])
 
   let domElement
+  // 动态 import 虽然通常很快，但连续双击不同区域时仍可能乱序返回；序号确保只采用最后一次请求的结果。
+  let drilldownRequestId = 0
 
   function setRegionMeshes(meshes, boundaryLines = []) {
     regionMeshes.value = meshes || []
@@ -176,7 +178,19 @@ export function useMapInteraction({
     if (!hit) return
 
     drilldownMessage.value = `正在尝试加载 ${hit.regionName} 乡镇级 GeoJSON...`
-    const childGeoJson = await loadChildGeoJson(hit.regionName)
+    const requestId = ++drilldownRequestId
+    let childGeoJson
+
+    try {
+      childGeoJson = await loadChildGeoJson(hit.regionName)
+    } catch {
+      if (requestId === drilldownRequestId) {
+        drilldownMessage.value = `${hit.regionName} 乡镇级 GeoJSON 加载失败，请检查文件格式。`
+      }
+      return
+    }
+
+    if (requestId !== drilldownRequestId) return
 
     if (!childGeoJson) {
       drilldownMessage.value = `${hit.regionName} 乡镇级 GeoJSON 尚未添加，已预留下钻接口。`
@@ -199,6 +213,7 @@ export function useMapInteraction({
   function drillUp() {
     if (breadcrumbs.value.length <= 1) return false
 
+    drilldownRequestId += 1
     breadcrumbs.value = breadcrumbs.value.slice(0, 1)
     drilldownMessage.value = ''
     if (activeRegionName.value) setRegionActive(activeRegionName.value, false)
